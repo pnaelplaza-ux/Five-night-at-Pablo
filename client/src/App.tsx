@@ -8,7 +8,6 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import MainMenu from "@/pages/MainMenu";
 import GameRoom from "@/pages/GameRoom";
 import ResultScreen from "@/pages/ResultScreen";
-import Leaderboard from "@/pages/Leaderboard";
 import NotFound from "@/pages/not-found";
 
 function Router() {
