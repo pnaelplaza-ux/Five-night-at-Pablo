@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { insertScoreSchema, leaderboard } from "./schema";
 
 export const errorSchemas = {
   validation: z.object({
@@ -15,24 +14,7 @@ export const errorSchemas = {
 };
 
 export const api = {
-  leaderboard: {
-    list: {
-      method: 'GET' as const,
-      path: '/api/leaderboard' as const,
-      responses: {
-        200: z.array(z.custom<typeof leaderboard.$inferSelect>()),
-      },
-    },
-    create: {
-      method: 'POST' as const,
-      path: '/api/leaderboard' as const,
-      input: insertScoreSchema,
-      responses: {
-        201: z.custom<typeof leaderboard.$inferSelect>(),
-        400: errorSchemas.validation,
-      },
-    },
-  },
+  // Authentication or other routes could go here if needed
 };
 
 export function buildUrl(path: string, params?: Record<string, string | number>): string {
@@ -46,7 +28,3 @@ export function buildUrl(path: string, params?: Record<string, string | number>)
   }
   return url;
 }
-
-export type ScoreInput = z.infer<typeof api.leaderboard.create.input>;
-export type ScoreResponse = z.infer<typeof api.leaderboard.create.responses[201]>;
-export type LeaderboardListResponse = z.infer<typeof api.leaderboard.list.responses[200]>;

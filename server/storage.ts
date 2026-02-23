@@ -1,25 +1,31 @@
 import { db } from "./db";
 import {
-  leaderboard,
-  type InsertScore,
-  type Score
+  type User,
+  type InsertUser,
+  users
 } from "@shared/schema";
-import { desc } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 
 export interface IStorage {
-  getLeaderboard(): Promise<Score[]>;
-  createScore(score: InsertScore): Promise<Score>;
+  getUser(id: number): Promise<User | undefined>;
+  getUserByUsername(username: string): Promise<User | undefined>;
+  createUser(user: InsertUser): Promise<User>;
 }
 
 export class DatabaseStorage implements IStorage {
-  async getLeaderboard(): Promise<Score[]> {
-    // Get top 50 scores, ordered by nights survived (desc), then energy left (desc)
-    return await db.select().from(leaderboard).orderBy(desc(leaderboard.survivedNights), desc(leaderboard.remainingEnergy)).limit(50);
+  async getUser(id: number): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
   }
 
-  async createScore(insertScore: InsertScore): Promise<Score> {
-    const [score] = await db.insert(leaderboard).values(insertScore).returning();
-    return score;
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user;
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const [user] = await db.insert(users).values(insertUser).returning();
+    return user;
   }
 }
 
