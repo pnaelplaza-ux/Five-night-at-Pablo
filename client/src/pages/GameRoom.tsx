@@ -48,12 +48,22 @@ export default function GameRoom() {
     return <div className="bg-black w-screen h-screen" />; // Loading state basically
   }
 
+  const enemyAtLeft = !!Object.values(state.enemies).find(e => e.location === 'DOOR_L');
+  const enemyAtRight = !!Object.values(state.enemies).find(e => e.location === 'DOOR_R');
+
   return (
     <CRTContainer>
       {/* Audio Manager */}
       <AudioPlayer 
         night={state.night} 
-        isPlaying={state.status === 'playing' && state.time === 0 && !state.powerOut} 
+        time={state.time}
+        status={state.status}
+        monitorOpen={state.monitorOpen}
+        doors={state.doors}
+        lights={state.lights}
+        enemyAtLeft={enemyAtLeft}
+        enemyAtRight={enemyAtRight}
+        powerOut={state.powerOut}
       />
 
       {/* Main Layers */}

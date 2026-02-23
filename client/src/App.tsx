@@ -17,7 +17,6 @@ function Router() {
       <Route path="/" component={MainMenu} />
       <Route path="/game" component={GameRoom} />
       <Route path="/result" component={ResultScreen} />
-      <Route path="/leaderboard" component={Leaderboard} />
       <Route component={NotFound} />
     </Switch>
   );

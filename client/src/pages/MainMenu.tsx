@@ -60,11 +60,6 @@ export default function MainMenu() {
               disabled={unlockedNight < 2}
               subtitle={unlockedNight < 2 ? "LOCKED - SURVIVE NIGHT 1" : undefined}
             />
-
-            <MenuButton 
-              text="COMPANY DATABASE" 
-              onClick={() => setLocation('/leaderboard')} 
-            />
           </div>
         </div>
 

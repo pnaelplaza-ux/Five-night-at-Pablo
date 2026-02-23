@@ -138,6 +138,7 @@ export function useGameEngine() {
   const setCamera = useCallback((camId: string) => {
     setState(s => {
       if (!s.monitorOpen || s.status !== 'playing') return s;
+      if (s.currentCamera === camId) return s; // Fix infinite flip
       return { ...s, currentCamera: camId, staticIntensity: 0.8 }; // Spike static on switch
     });
   }, []);
@@ -170,7 +171,7 @@ export function useGameEngine() {
           if (next.lights.right) usage++;
           if (next.monitorOpen) usage++;
 
-          // drain = usage * 0.15 per second (rough approx for ~6 mins max life)
+          // drain = usage * 0.12 per second
           next.energy = Math.max(0, next.energy - (usage * 0.12));
 
           if (next.energy <= 0) {
@@ -187,8 +188,8 @@ export function useGameEngine() {
         }
 
         // 3. Enemy AI Movement
-        // Only move every few seconds to not be insane
-        if (tickRef.current % 4 === 0 && !next.powerOut) {
+        // FNaF 1 Style: Movement rolls every few seconds
+        if (tickRef.current % 5 === 0 && !next.powerOut) {
           const updatedEnemies = { ...next.enemies };
           
           Object.keys(updatedEnemies).forEach(key => {
@@ -198,53 +199,62 @@ export function useGameEngine() {
             // Aggression roll (1-20). If random 1-20 is <= aggression, move!
             const roll = Math.floor(Math.random() * 20) + 1;
             
-            if (e.location === 'DOOR_L' || e.location === 'DOOR_R') {
-              // At door logic
-              e.doorTimer++;
-              const isClosed = e.location === 'DOOR_L' ? next.doors.left : next.doors.right;
-              
-              if (isClosed) {
-                // Door is closed, eventually leave
-                if (e.doorTimer > 2) {
-                  e.location = 'CAM1'; // Reset
-                  e.doorTimer = 0;
-                }
+            if (roll <= e.aggression) {
+              if (e.location === 'DOOR_L' || e.location === 'DOOR_R') {
+                 // Already at door, handle separately or stay
               } else {
-                // Door is open, attack if they've been waiting
-                if (e.doorTimer > 3) {
-                  // Only attack if monitor is closed or forced down
-                  next.monitorOpen = false;
-                  triggerJumpscare(e.id);
+                // Movement logic
+                if (e.id === 'pablo') {
+                  const path = ['CAM1', 'CAM2', 'CAM3', 'DOOR_L'];
+                  const idx = path.indexOf(e.location);
+                  if (idx > -1 && idx < path.length - 1) e.location = path[idx + 1];
+                } else if (e.id === 'friend2') {
+                  const path = ['CAM1', 'CAM2', 'CAM4', 'DOOR_R'];
+                  const idx = path.indexOf(e.location);
+                  if (idx > -1 && idx < path.length - 1) e.location = path[idx + 1];
+                } else if (e.id === 'friend3') {
+                   const cams = ['CAM1', 'CAM5', 'CAM3', 'DOOR_L'];
+                   const idx = cams.indexOf(e.location);
+                   if (idx > -1 && idx < cams.length - 1) e.location = cams[idx + 1];
+                } else if (e.id === 'friend4') {
+                   const cams = ['CAM6', 'CAM4', 'DOOR_R'];
+                   const idx = cams.indexOf(e.location);
+                   if (idx > -1 && idx < cams.length - 1) e.location = cams[idx + 1];
                 }
-              }
-            } else if (roll <= e.aggression) {
-              // Movement logic
-              // Simple fixed paths for generated code reliability
-              if (e.id === 'pablo') {
-                const path = ['CAM1', 'CAM2', 'CAM3', 'DOOR_L'];
-                const idx = path.indexOf(e.location);
-                if (idx > -1 && idx < path.length - 1) e.location = path[idx + 1];
-              } else if (e.id === 'friend2') {
-                const path = ['CAM1', 'CAM2', 'CAM4', 'DOOR_R'];
-                const idx = path.indexOf(e.location);
-                if (idx > -1 && idx < path.length - 1) e.location = path[idx + 1];
-              } else if (e.id === 'friend3') {
-                 // Random wanderer
-                 const cams = ['CAM1', 'CAM2', 'CAM5', 'CAM6', 'DOOR_L'];
-                 e.location = cams[Math.floor(Math.random() * cams.length)];
-              } else if (e.id === 'friend4') {
-                 const cams = ['CAM6', 'CAM4', 'DOOR_R'];
-                 const idx = cams.indexOf(e.location);
-                 if (idx > -1 && idx < cams.length - 1) e.location = cams[idx + 1];
               }
             }
           });
           next.enemies = updatedEnemies;
         }
 
-        // 4. Static decay
+        // 4. Door Attack Logic (Every second)
+        const updatedEnemies = { ...next.enemies };
+        Object.keys(updatedEnemies).forEach(key => {
+          const e = updatedEnemies[key as EnemyId];
+          if (e.location === 'DOOR_L' || e.location === 'DOOR_R') {
+            e.doorTimer++;
+            const isClosed = e.location === 'DOOR_L' ? next.doors.left : next.doors.right;
+            
+            if (isClosed) {
+              // Successfully blocked
+              if (e.doorTimer > 5) {
+                e.location = 'CAM1'; 
+                e.doorTimer = 0;
+              }
+            } else {
+              // Open door, attack!
+              if (e.doorTimer > 4) {
+                next.monitorOpen = false;
+                triggerJumpscare(e.id);
+              }
+            }
+          }
+        });
+        next.enemies = updatedEnemies;
+
+        // 5. Static decay
         if (next.staticIntensity > 0.3) {
-           next.staticIntensity = Math.max(0.3, next.staticIntensity - 0.1);
+           next.staticIntensity = Math.max(0.3, next.staticIntensity - 0.05);
         }
 
         return next;

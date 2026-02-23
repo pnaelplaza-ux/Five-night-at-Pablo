@@ -1,12 +1,16 @@
 import { GameState } from "@/hooks/use-game-engine";
 
 // Image mappings
-import friend1Img from '@assets/WA_1771869060539_1771870866599.jpeg';
-import friend2Img from '@assets/IMG-20251221-WA0015_1771870866643.jpg';
+import friend1Img from '../assets/WA_1771869060539_1771870866599.jpeg';
+import friend2Img from '../assets/IMG-20251221-WA0015_1771870866643.jpg';
+import friend3Img from '../assets/IMG-20251221-WA0028_1771870866656.jpg';
+import friend4Img from '../assets/WA_1771868918600_1771870866666.jpeg';
 
 const ENEMY_IMAGES: Record<string, string> = {
   friend1Img: friend1Img,
   friend2Img: friend2Img,
+  friend3Img: friend3Img,
+  friend4Img: friend4Img,
 };
 
 interface OfficeRoomProps {
@@ -113,7 +117,7 @@ export function OfficeRoom({ state, toggleDoor, toggleLight, toggleMonitor }: Of
       {!state.powerOut && (
         <div 
           className="absolute bottom-4 left-1/2 -translate-x-1/2 z-40 w-64 h-16 bg-white/5 border border-white/20 rounded flex items-center justify-center cursor-pointer hover:bg-white/10 transition-colors backdrop-blur-sm"
-          onMouseEnter={toggleMonitor}
+          onClick={toggleMonitor}
         >
           <span className="text-xl font-display tracking-widest text-white/70">^ OPEN SYSTEM</span>
         </div>
