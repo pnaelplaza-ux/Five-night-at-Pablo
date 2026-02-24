@@ -6,7 +6,7 @@ import camOpen from '../assets/fnaf-open-camera-sound_1771872460573.mp3';
 import doorSlam from '../assets/door-slamming-fnaf-1-sound-effects_1771872460573.mp3';
 import fnaf2Ambience from '../assets/fnaf2-ambience_1771872491384.mp3';
 import animatronicAtDoor from '../assets/animatronic-in-door_1771872460573.mp3';
-import jumpscareSound from '../assets/Screamer_like_fnaf_#4-1771872293897_1771872491384.mp3';
+import jumpscareSound from '../assets/Screamer_like_fnaf_4-1771872293897_1771872491384.mp3';
 
 interface AudioPlayerProps {
   night: number;
