@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { useLocation } from "wouter";
+// Importation directe depuis le fichier voisin
 import { CRTContainer } from "./GameRoom";
 
-// Main Menu specific assets can be just text to keep it ominous
 export default function MainMenu() {
   const [, setLocation] = useLocation();
   const [unlockedNight, setUnlockedNight] = useState(1);
@@ -14,7 +14,6 @@ export default function MainMenu() {
       setUnlockedNight(parseInt(saved, 10));
     }
 
-    // Random heavy static blips on main menu
     const interval = setInterval(() => {
       if (Math.random() > 0.8) {
         setShowStatic(true);
