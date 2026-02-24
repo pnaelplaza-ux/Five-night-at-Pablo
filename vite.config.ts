@@ -1,38 +1,19 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
-import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
-
-export default defineConfig({
-  plugins: [
-    react(),
-    runtimeErrorOverlay(),
-    ...(process.env.NODE_ENV !== "production" &&
-    process.env.REPL_ID !== undefined
-      ? [
-          await import("@replit/vite-plugin-cartographer").then((m) =>
-            m.cartographer(),
-          ),
-          await import("@replit/vite-plugin-dev-banner").then((m) =>
-            m.devBanner(),
-          ),
-        ]
-      : []),
-  ],
- import { defineConfig } from 'vite';
-import react from '@vitejs/plugin-react';
-import path from 'path';
 
 export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./client/src"), // On dit explicitement où est le @
+      // On définit explicitement que @ pointe vers le dossier client/src
+      "@": path.resolve(__dirname, "./client/src"),
     },
   },
-  root: 'client', // On précise que la racine du code est dans le dossier client
+  root: "client",
   build: {
-    outDir: '../dist/public',
+    // On s'assure que le dossier de sortie est bien celui attendu par Netlify
+    outDir: "dist",
     emptyOutDir: true,
-  }
+  },
 });
