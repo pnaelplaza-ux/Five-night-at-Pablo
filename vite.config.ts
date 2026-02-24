@@ -6,14 +6,15 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      // On définit explicitement que @ pointe vers le dossier client/src
+      // Cette ligne répare TOUS les imports avec "@" d'un coup
       "@": path.resolve(__dirname, "./client/src"),
     },
   },
+  // On définit la racine sur le dossier client
   root: "client",
   build: {
-    // On s'assure que le dossier de sortie est bien celui attendu par Netlify
-    outDir: "dist",
+    // Dossier de sortie pour Netlify
+    outDir: "../dist",
     emptyOutDir: true,
   },
 });
