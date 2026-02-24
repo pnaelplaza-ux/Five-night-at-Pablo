@@ -1,11 +1,12 @@
 import { useEffect } from "react";
 import { useLocation } from "wouter";
-import { useGameEngine } from "@/hooks/use-game-engine";
-import { OfficeRoom } from "@/components/OfficeRoom";
-import { MonitorUI } from "@/components/MonitorUI";
-import { GameHud } from "@/components/GameHud";
-import { Jumpscare } from "@/components/Jumpscare";
-import { AudioPlayer } from "@/components/AudioPlayer";
+// Remplacement des @/ par des chemins relatifs
+import { useGameEngine } from "../hooks/use-game-engine";
+import { OfficeRoom } from "../components/OfficeRoom";
+import { MonitorUI } from "../components/MonitorUI";
+import { GameHud } from "../components/GameHud";
+import { Jumpscare } from "../components/Jumpscare";
+import { AudioPlayer } from "../components/AudioPlayer";
 
 // Reusable CRT layout wrapper
 export function CRTContainer({ children }: { children: React.ReactNode }) {
@@ -23,7 +24,6 @@ export default function GameRoom() {
   const [, setLocation] = useLocation();
   const { state, startGame, toggleDoor, toggleLight, toggleMonitor, setCamera, setLookBehind, quitToMenu } = useGameEngine();
 
-  // Initialize from session storage if possible, otherwise default to night 1
   useEffect(() => {
     if (state.status === 'menu') {
       const nightStr = sessionStorage.getItem('pablos_night') || '1';
@@ -31,7 +31,6 @@ export default function GameRoom() {
     }
   }, [state.status, startGame]);
 
-  // Handle Game Over / Win Transitions
   useEffect(() => {
     if (state.status === 'gameover') {
       sessionStorage.setItem('pablos_result', 'gameover');
@@ -45,7 +44,7 @@ export default function GameRoom() {
   }, [state.status, state.night, state.energy, setLocation]);
 
   if (state.status === 'menu') {
-    return <div className="bg-black w-screen h-screen" />; // Loading state basically
+    return <div className="bg-black w-screen h-screen" />; 
   }
 
   const enemyAtLeft = !!Object.values(state.enemies).find(e => e.location === 'DOOR_L');
@@ -53,7 +52,6 @@ export default function GameRoom() {
 
   return (
     <CRTContainer>
-      {/* Audio Manager */}
       <AudioPlayer 
         night={state.night} 
         time={state.time}
@@ -66,7 +64,6 @@ export default function GameRoom() {
         powerOut={state.powerOut}
       />
 
-      {/* Main Layers */}
       <OfficeRoom 
         state={state} 
         toggleDoor={toggleDoor} 
@@ -85,7 +82,6 @@ export default function GameRoom() {
       
       <Jumpscare enemyId={state.jumpscareEnemy} />
 
-      {/* Emergency Quit */}
       <button 
         onClick={quitToMenu}
         className="absolute top-4 left-4 z-50 text-white/30 hover:text-white font-display text-sm"
