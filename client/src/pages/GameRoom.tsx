@@ -21,7 +21,7 @@ export function CRTContainer({ children }: { children: React.ReactNode }) {
 
 export default function GameRoom() {
   const [, setLocation] = useLocation();
-  const { state, startGame, toggleDoor, toggleLight, toggleMonitor, setCamera, quitToMenu } = useGameEngine();
+  const { state, startGame, toggleDoor, toggleLight, toggleMonitor, setCamera, setLookBehind, quitToMenu } = useGameEngine();
 
   // Initialize from session storage if possible, otherwise default to night 1
   useEffect(() => {
@@ -71,7 +71,8 @@ export default function GameRoom() {
         state={state} 
         toggleDoor={toggleDoor} 
         toggleLight={toggleLight} 
-        toggleMonitor={toggleMonitor} 
+        toggleMonitor={toggleMonitor}
+        setLookBehind={setLookBehind}
       />
       
       <MonitorUI 

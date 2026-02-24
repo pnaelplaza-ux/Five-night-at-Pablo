@@ -2,15 +2,20 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 
 // Rooms configuration
 export const CAMERAS = [
-  { id: 'CAM1', name: 'Show Stage' },
-  { id: 'CAM2', name: 'Dining Area' },
-  { id: 'CAM3', name: 'West Hall' },
-  { id: 'CAM4', name: 'East Hall' },
-  { id: 'CAM5', name: 'Supply Closet' },
+  { id: 'CAM1A', name: 'Show Stage' },
+  { id: 'CAM1B', name: 'Dining Area' },
+  { id: 'CAM1C', name: 'Pirate Cove' },
+  { id: 'CAM2A', name: 'West Hall' },
+  { id: 'CAM2B', name: 'West Hall Corner' },
+  { id: 'CAM3', name: 'Supply Closet' },
+  { id: 'CAM4A', name: 'East Hall' },
+  { id: 'CAM4B', name: 'East Hall Corner' },
+  { id: 'CAM5', name: 'Backstage' },
   { id: 'CAM6', name: 'Kitchen' },
+  { id: 'CAM7', name: 'Restrooms' },
 ];
 
-export type EnemyId = 'pablo' | 'friend2' | 'friend3' | 'friend4';
+export type EnemyId = 'freddy' | 'bonnie' | 'chica' | 'foxy';
 
 export interface Enemy {
   id: EnemyId;
@@ -19,6 +24,8 @@ export interface Enemy {
   location: string;
   aggression: number; // 1-20
   doorTimer: number; // Time spent at door before attacking
+  foxyStage?: number; // 0-3 for Foxy
+  isBroken?: boolean; // If they broke the buttons
 }
 
 export interface GameState {
@@ -31,20 +38,24 @@ export interface GameState {
   // Office interactables
   doors: { left: boolean; right: boolean };
   lights: { left: boolean; right: boolean };
+  buttonsBroken: { left: boolean; right: boolean };
   monitorOpen: boolean;
   currentCamera: string;
+  lookBehind: boolean;
+  isRotating: boolean;
   
   // Entities
   enemies: Record<EnemyId, Enemy>;
   jumpscareEnemy: EnemyId | null;
   staticIntensity: number;
+  rareBonnieEvent: boolean;
 }
 
 const INITIAL_ENEMIES: Record<EnemyId, Enemy> = {
-  pablo: { id: 'pablo', name: 'Pablo', image: 'friend1Img', location: 'CAM1', aggression: 0, doorTimer: 0 },
-  friend2: { id: 'friend2', name: 'Friend 2', image: 'friend2Img', location: 'CAM1', aggression: 0, doorTimer: 0 },
-  friend3: { id: 'friend3', name: 'Friend 3', image: 'friend3Img', location: 'CAM5', aggression: 0, doorTimer: 0 },
-  friend4: { id: 'friend4', name: 'Friend 4', image: 'friend4Img', location: 'CAM6', aggression: 0, doorTimer: 0 },
+  freddy: { id: 'freddy', name: 'Freddy', image: 'freddyImg', location: 'CAM1A', aggression: 0, doorTimer: 0 },
+  bonnie: { id: 'bonnie', name: 'Bonnie', image: 'bonnieImg', location: 'CAM1A', aggression: 0, doorTimer: 0 },
+  chica: { id: 'chica', name: 'Chica', image: 'chicaImg', location: 'CAM1A', aggression: 0, doorTimer: 0 },
+  foxy: { id: 'foxy', name: 'Foxy', image: 'foxyImg', location: 'CAM1C', aggression: 0, doorTimer: 0, foxyStage: 0 },
 };
 
 // 1 in-game hour = 60 real seconds.
@@ -62,11 +73,15 @@ export function useGameEngine() {
     powerOut: false,
     doors: { left: false, right: false },
     lights: { left: false, right: false },
+    buttonsBroken: { left: false, right: false },
     monitorOpen: false,
-    currentCamera: 'CAM1',
+    currentCamera: 'CAM1A',
+    lookBehind: false,
+    isRotating: false,
     enemies: { ...INITIAL_ENEMIES },
     jumpscareEnemy: null,
     staticIntensity: 0.3,
+    rareBonnieEvent: false,
   });
 
   const tickRef = useRef<number>(0);
@@ -80,16 +95,20 @@ export function useGameEngine() {
       powerOut: false,
       doors: { left: false, right: false },
       lights: { left: false, right: false },
+      buttonsBroken: { left: false, right: false },
       monitorOpen: false,
-      currentCamera: 'CAM1',
+      currentCamera: 'CAM1A',
+      lookBehind: false,
+      isRotating: false,
       enemies: {
-        pablo: { ...INITIAL_ENEMIES.pablo, aggression: night === 1 ? 3 : 8 },
-        friend2: { ...INITIAL_ENEMIES.friend2, aggression: night === 1 ? 2 : 7 },
-        friend3: { ...INITIAL_ENEMIES.friend3, aggression: night === 1 ? 0 : 5 }, // Inactive N1
-        friend4: { ...INITIAL_ENEMIES.friend4, aggression: night === 1 ? 0 : 6 }, // Inactive N1
+        freddy: { ...INITIAL_ENEMIES.freddy, aggression: night >= 3 ? night * 2 : 0 },
+        bonnie: { ...INITIAL_ENEMIES.bonnie, aggression: night * 3 },
+        chica: { ...INITIAL_ENEMIES.chica, aggression: night * 2 },
+        foxy: { ...INITIAL_ENEMIES.foxy, aggression: night + 1 },
       },
       jumpscareEnemy: null,
       staticIntensity: 0.3,
+      rareBonnieEvent: false,
     });
     tickRef.current = 0;
   }, []);
@@ -103,7 +122,6 @@ export function useGameEngine() {
       staticIntensity: 1.0,
     }));
     
-    // End game shortly after jumpscare
     setTimeout(() => {
       setState(s => ({ ...s, status: 'gameover' }));
     }, 2500);
@@ -112,15 +130,14 @@ export function useGameEngine() {
   // Actions
   const toggleDoor = useCallback((side: 'left' | 'right') => {
     setState(s => {
-      if (s.powerOut || s.status !== 'playing') return s;
+      if (s.powerOut || s.status !== 'playing' || s.buttonsBroken[side]) return s;
       return { ...s, doors: { ...s.doors, [side]: !s.doors[side] } };
     });
   }, []);
 
   const toggleLight = useCallback((side: 'left' | 'right') => {
     setState(s => {
-      if (s.powerOut || s.status !== 'playing') return s;
-      // Turn off other light if switching
+      if (s.powerOut || s.status !== 'playing' || s.buttonsBroken[side]) return s;
       const newLights = { left: false, right: false };
       newLights[side] = !s.lights[side];
       return { ...s, lights: newLights };
@@ -129,8 +146,7 @@ export function useGameEngine() {
 
   const toggleMonitor = useCallback(() => {
     setState(s => {
-      if (s.powerOut || s.status !== 'playing') return s;
-      // Turn off lights when using monitor
+      if (s.powerOut || s.status !== 'playing' || s.lookBehind) return s;
       return { ...s, monitorOpen: !s.monitorOpen, lights: { left: false, right: false } };
     });
   }, []);
@@ -138,8 +154,15 @@ export function useGameEngine() {
   const setCamera = useCallback((camId: string) => {
     setState(s => {
       if (!s.monitorOpen || s.status !== 'playing') return s;
-      if (s.currentCamera === camId) return s; // Fix infinite flip
-      return { ...s, currentCamera: camId, staticIntensity: 0.8 }; // Spike static on switch
+      if (s.currentCamera === camId) return s;
+      return { ...s, currentCamera: camId, staticIntensity: 0.8 };
+    });
+  }, []);
+
+  const setLookBehind = useCallback((val: boolean) => {
+    setState(s => {
+      if (s.monitorOpen || s.status !== 'playing') return s;
+      return { ...s, lookBehind: val };
     });
   }, []);
 
@@ -164,14 +187,13 @@ export function useGameEngine() {
 
         // 2. Power Drain
         if (!next.powerOut) {
-          let usage = 1; // Base drain
+          let usage = 1;
           if (next.doors.left) usage++;
           if (next.doors.right) usage++;
           if (next.lights.left) usage++;
           if (next.lights.right) usage++;
           if (next.monitorOpen) usage++;
 
-          // drain = usage * 0.12 per second
           next.energy = Math.max(0, next.energy - (usage * 0.12));
 
           if (next.energy <= 0) {
@@ -180,15 +202,13 @@ export function useGameEngine() {
             next.lights = { left: false, right: false };
             next.monitorOpen = false;
             
-            // Freddy-style power out delay jumpscare
             setTimeout(() => {
-              triggerJumpscare('pablo');
+              triggerJumpscare('freddy');
             }, Math.random() * 10000 + 5000);
           }
         }
 
         // 3. Enemy AI Movement
-        // FNaF 1 Style: Movement rolls every few seconds
         if (tickRef.current % 5 === 0 && !next.powerOut) {
           const updatedEnemies = { ...next.enemies };
           
@@ -196,30 +216,30 @@ export function useGameEngine() {
             const e = updatedEnemies[key as EnemyId];
             if (e.aggression === 0) return;
 
-            // Aggression roll (1-20). If random 1-20 is <= aggression, move!
             const roll = Math.floor(Math.random() * 20) + 1;
             
             if (roll <= e.aggression) {
-              if (e.location === 'DOOR_L' || e.location === 'DOOR_R') {
-                 // Already at door, handle separately or stay
-              } else {
-                // Movement logic
-                if (e.id === 'pablo') {
-                  const path = ['CAM1', 'CAM2', 'CAM3', 'DOOR_L'];
+              if (e.id === 'foxy') {
+                if (e.foxyStage! < 3) {
+                   e.foxyStage!++;
+                } else if (e.foxyStage === 3) {
+                   // Run!
+                   e.location = 'DOOR_L';
+                   e.foxyStage = 0;
+                }
+              } else if (e.location !== 'DOOR_L' && e.location !== 'DOOR_R') {
+                if (e.id === 'bonnie') {
+                  const path = ['CAM1A', 'CAM1B', 'CAM5', 'CAM2A', 'CAM3', 'CAM2B', 'DOOR_L'];
                   const idx = path.indexOf(e.location);
                   if (idx > -1 && idx < path.length - 1) e.location = path[idx + 1];
-                } else if (e.id === 'friend2') {
-                  const path = ['CAM1', 'CAM2', 'CAM4', 'DOOR_R'];
+                } else if (e.id === 'chica') {
+                  const path = ['CAM1A', 'CAM1B', 'CAM7', 'CAM4A', 'CAM4B', 'DOOR_R'];
                   const idx = path.indexOf(e.location);
                   if (idx > -1 && idx < path.length - 1) e.location = path[idx + 1];
-                } else if (e.id === 'friend3') {
-                   const cams = ['CAM1', 'CAM5', 'CAM3', 'DOOR_L'];
-                   const idx = cams.indexOf(e.location);
-                   if (idx > -1 && idx < cams.length - 1) e.location = cams[idx + 1];
-                } else if (e.id === 'friend4') {
-                   const cams = ['CAM6', 'CAM4', 'DOOR_R'];
-                   const idx = cams.indexOf(e.location);
-                   if (idx > -1 && idx < cams.length - 1) e.location = cams[idx + 1];
+                } else if (e.id === 'freddy') {
+                   const path = ['CAM1A', 'CAM1B', 'CAM7', 'CAM4A', 'CAM4B', 'DOOR_R'];
+                   const idx = path.indexOf(e.location);
+                   if (idx > -1 && idx < path.length - 1) e.location = path[idx + 1];
                 }
               }
             }
@@ -227,23 +247,28 @@ export function useGameEngine() {
           next.enemies = updatedEnemies;
         }
 
-        // 4. Door Attack Logic (Every second)
+        // 4. Door Attack & Button Breaking
         const updatedEnemies = { ...next.enemies };
         Object.keys(updatedEnemies).forEach(key => {
           const e = updatedEnemies[key as EnemyId];
           if (e.location === 'DOOR_L' || e.location === 'DOOR_R') {
             e.doorTimer++;
-            const isClosed = e.location === 'DOOR_L' ? next.doors.left : next.doors.right;
+            const side = e.location === 'DOOR_L' ? 'left' : 'right';
+            const isClosed = next.doors[side];
             
             if (isClosed) {
-              // Successfully blocked
-              if (e.doorTimer > 5) {
-                e.location = 'CAM1'; 
+              if (e.doorTimer > 6) {
+                e.location = 'CAM1A'; 
                 e.doorTimer = 0;
               }
             } else {
-              // Open door, attack!
-              if (e.doorTimer > 4) {
+              // Chance to break buttons if door is open and they are there
+              if (e.doorTimer > 3 && Math.random() < 0.2) {
+                next.buttonsBroken[side] = true;
+                next.lights[side] = false;
+              }
+
+              if (e.doorTimer > 5) {
                 next.monitorOpen = false;
                 triggerJumpscare(e.id);
               }
@@ -252,7 +277,11 @@ export function useGameEngine() {
         });
         next.enemies = updatedEnemies;
 
-        // 5. Static decay
+        // Rare Bonnie Event
+        if (tickRef.current % 10 === 0 && !next.rareBonnieEvent && state.night >= 2 && Math.random() < 0.05) {
+            next.rareBonnieEvent = true;
+        }
+
         if (next.staticIntensity > 0.3) {
            next.staticIntensity = Math.max(0.3, next.staticIntensity - 0.05);
         }
@@ -271,6 +300,7 @@ export function useGameEngine() {
     toggleLight,
     toggleMonitor,
     setCamera,
+    setLookBehind,
     quitToMenu: () => setState(s => ({ ...s, status: 'menu' }))
   };
 }
